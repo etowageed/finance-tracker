@@ -1,9 +1,3 @@
-<script setup>
-import { transactionViewOptions } from '~/constants';
-const selectedView = ref(transactionViewOptions[1])
-
-</script>
-
 <template>
     <section class="flex items-center justify-between mb-10">
         <h1 class="text-4xl font-extrabold">
@@ -20,4 +14,27 @@ const selectedView = ref(transactionViewOptions[1])
         <Trend color="green" title="Investments" :amount="4000" :last-amount="3000" :loading="false" />
         <Trend color="red" title="Income" :amount="4000" :last-amount="3000" :loading="true" />
     </section>
+
+    <section>
+        <Transaction v-for="transaction in transactions" :key="transaction.id" :transaction="transaction" />
+    </section>
 </template>
+
+<script setup>
+import { transactionViewOptions } from '~/constants';
+const selectedView = ref(transactionViewOptions[1])
+const transactions = ref([])
+
+const supabase = useSupabaseClient()
+
+const { data, pending } = await useAsyncData('transactions', async () => {
+    const { data, error } = await supabase
+        .from('transactions')
+        .select()
+    if (error) return []
+    return data
+})
+
+console.log(data);
+transactions.value = data.value
+</script>
