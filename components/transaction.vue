@@ -14,7 +14,8 @@
             <div>{{ currency }}</div>
             <div>
                 <UDropdownMenu :items="items" :popper="{ placement: 'bottom-start' }">
-                    <UButton color="neutral" variant="ghost" trailing-icon="i-heroicons-ellipsis-horizontal" />
+                    <UButton color="neutral" variant="ghost" trailing-icon="i-heroicons-ellipsis-horizontal"
+                        :loading="isLoading" />
                 </UDropdownMenu>
             </div>
         </div>
@@ -28,6 +29,9 @@ const props = defineProps({
     transaction: Object,
 
 })
+
+const emit = defineEmits(['refresh'])
+
 //  make the icon dynamic based on the transaction type
 const icon = computed(() => {
     return props.transaction.type === 'income'
@@ -40,6 +44,41 @@ const iconColor = computed(() => {
 })
 
 const { currency } = useCurrency(props.transaction.amount)
+const isLoading = ref(false)
+
+// toast notification
+const toast = useToast()
+
+const supabase = useSupabaseClient()
+
+const deleteTransaction = async () => {
+    isLoading.value = true
+    try {
+        // Call the Supabase delete function to remove the transaction
+        await supabase
+            .from('transactions')
+            .delete()
+            .eq('id', props.transaction.id)
+        toast.add({
+            title: 'Transaction deleted',
+            icon: 'i-heroicons-check-circle',
+            color: 'success',
+        })
+        // Emit an event to notify the parent component to refresh the transaction list
+        emit('refresh', props.transaction.id)
+    } catch (error) {
+        console.error('Error deleting transaction:', error)
+        toast.add({
+            title: 'Error deleting transaction',
+            message: error.message,
+            icon: 'i-heroicons-x-circle',
+            color: 'danger',
+        })
+    } finally {
+        isLoading.value = false
+    }
+
+}
 
 const items = [
     [
@@ -51,7 +90,7 @@ const items = [
         {
             label: 'Delete',
             icon: 'i-heroicons-trash-20-solid',
-            onSelect: () => console.log('Delete action triggered')
+            onSelect: deleteTransaction
         }
     ]
 ]
