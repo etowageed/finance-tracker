@@ -27,20 +27,7 @@
 
 
         <div>
-            <UModal>
-                <!-- Add new transaction button -->
-                <UButton icon="i-heroicons-plus-circle" color="neutral" variant="outline" label="Add" class="p-4"
-                    @click="isOpen = true" />
-
-                <template #content>
-                    <UCard>
-                        <template #header>
-                            Add Transaction
-                        </template>
-                        <div>Hello!</div>
-                    </UCard>
-                </template>
-            </UModal>
+            <TransactionModal />
         </div>
 
     </section>
