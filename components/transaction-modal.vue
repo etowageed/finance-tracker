@@ -1,16 +1,16 @@
 <template>
-    <UModal title="Add Transaction">
+    <UModal v-model="isOpen" title="Add Transaction">
         <UButton icon="i-heroicons-plus-circle" color="neutral" variant="outline" label="Add" class="p-2.5" />
 
         <template #body>
-            <UForm :state="state" :schema="schema">
+            <UForm :state="state" :schema="schema" ref="form" @submit="save">
                 <UCard>
                     <UFormField label="Transaction Type" name="type" class="mb-4" required>
                         <USelect placeholder="Select the transaction type" :items="types" class="w-full"
                             v-model="state.type" />
                     </UFormField>
                     <UFormField label="Amount" name="amount" class="mb-4" required>
-                        <UInput type="number" placeholder="Amount" class="w-full" v-model="state.amount" />
+                        <UInput type="number" placeholder="Amount" class="w-full" v-model.number="state.amount" />
                     </UFormField>
                     <UFormField label="Transaction date" name="created_at" class="mb-4" required>
                         <UInput type="date" icon="i-heroicons-calendar-days-20-solid" class="w-full"
@@ -19,7 +19,8 @@
                     <UFormField label="Description" hint="Optional" name="description" class="mb-4">
                         <UInput placeholder="Description" class="w-full" v-model="state.description" />
                     </UFormField>
-                    <UFormField label="Category" name="category" class="mb-4" required>
+                    <!-- Category field is only shown for expenses -->
+                    <UFormField label="Category" name="category" class="mb-4" v-if="state.type === 'Expense'" required>
                         <USelect placeholder="Category" :items="categories" class="w-full" v-model="state.category" />
                     </UFormField>
 
@@ -34,7 +35,13 @@
 import { categories, types } from "~/constants";
 import z from "zod";
 
-const schema = z.object({
+const props = defineProps({
+    modelValue: Boolean
+})
+
+const emit = defineEmits(['update:modelValue'])
+
+const defaultSchema = z.object({
     // type: z.enum(types),
     amount: z.number().positive().min(0),
     created_at: z.string(),
@@ -42,11 +49,61 @@ const schema = z.object({
     // category: z.enum(categories),
 })
 
-const state = ref({
+const incomeSchema = z.object({
+    type: z.literal('Income')
+})
+const expenseSchema = z.object({
+    type: z.literal('Expense'),
+    category: z.enum(categories)
+
+})
+const investmentSchema = z.object({
+    type: z.literal('Investment')
+})
+const savingSchema = z.object({
+    type: z.literal('Saving')
+})
+// Add custom errorMap to the discriminatedUnion
+const schema = z.intersection(
+    z.discriminatedUnion('type', [incomeSchema, expenseSchema, investmentSchema, savingSchema], {
+        errorMap: (issue, ctx) => {
+            if (issue.code === 'invalid_union_discriminator') {
+                return { message: "Please select a valid transaction type: Income, Expense, Investment, or Saving." }
+            }
+            return { message: ctx.defaultError }
+        }
+    }),
+    defaultSchema
+)
+
+const form = ref()
+
+const initialState = {
     type: undefined,
     amount: 0,
     created_at: undefined,
     description: undefined,
     category: undefined,
+}
+
+const save = async () => {
+    if (form.value.errors.length) return
+}
+
+const state = ref({
+    ...initialState
+})
+
+const resetForm = () => {
+    Object.assign(state.value, initialState)
+    form.value.clear()
+}
+
+const isOpen = computed({
+    get: () => props.modelValue,
+    set: (value) => {
+        if (!value) resetForm()
+        emit('update:modelValue', value)
+    }
 })
 </script>
