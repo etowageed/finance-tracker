@@ -11,10 +11,10 @@
 
     <!-- Summary cards showing trends for Income, Expense, Investments, etc. -->
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 sm:gap-16 mb-10">
-        <Trend color="green" title="Income" :amount="incomeTotal" :last-amount="3000" :loading="isLoading" />
-        <Trend color="red" title="Expense" :amount="expenseTotal" :last-amount="6000" :loading="isLoading" />
-        <Trend color="green" title="Investments" :amount="4000" :last-amount="3000" :loading="isLoading" />
-        <Trend color="red" title="Income" :amount="4000" :last-amount="3000" :loading="isLoading" />
+        <Trend color="green" title="Income" :amount="incomeTotal" :last-amount="prevIncomeTotal" :loading="pending" />
+        <Trend color="red" title="Expense" :amount="expenseTotal" :last-amount="prevExpenseTotal" :loading="pending" />
+        <Trend color="green" title="Investments" :amount="4000" :last-amount="3000" :loading="pending" />
+        <Trend color="red" title="Income" :amount="4000" :last-amount="3000" :loading="pending" />
     </section>
 
     <section class="flex justify-between mb-10">
@@ -27,18 +27,18 @@
 
 
         <div>
-            <TransactionModal />
+            <TransactionModal v-model="isOpen" @saved="refresh()" />
         </div>
 
     </section>
 
 
     <!-- List of transactions rendered using the Transaction component -->
-    <section v-if="!isLoading">
-        <div v-for="(transactionsOnDay, date) in transactionsGroupedByDate" :key="date" class="mb-10">
+    <section v-if="!pending">
+        <div v-for="(transactionsOnDay, date) in byDate" :key="date" class="mb-10">
             <DailyTransactionSummary :date="date" :transactions="transactionsOnDay" />
             <Transaction v-for="transaction in transactionsOnDay" :key="transaction.id" :transaction="transaction"
-                @refresh="refreshTransactions" />
+                @refresh="refresh()" />
         </div>
     </section>
     <section v-else>
@@ -49,69 +49,23 @@
 <script setup>
 import { transactionViewOptions } from '~/constants';
 const selectedView = ref(transactionViewOptions[1])
+const { current, previous } = useSelectedTimePeriod(selectedView)
 
-const transactions = ref([]) // Reactive variable to hold transactions data from the backend
-
-const supabase = useSupabaseClient() // connect to Supabase backend for database operations
-const isLoading = ref(false) // Reactive variable to track loading state
 const isOpen = ref(false)
 
-// Computed properties for income and expense transactions
-const income = computed(() => {
-    return transactions.value.filter(t => t.type === 'income')
-})
-const expense = computed(() => {
-    return transactions.value.filter(t => t.type === 'expense')
-})
-const incomeCount = computed(() => income.value.length)
-const expenseCount = computed(() => expense.value.length)
-const incomeTotal = computed(() => income.value.reduce((sum, transaction) => sum + transaction.amount, 0))
-const expenseTotal = computed(() => expense.value.reduce((sum, transaction) => sum + transaction.amount, 0))
-
-
-const fetchTransactions = async () => {
-    isLoading.value = true
-
-    try {
-        const { data } = await useAsyncData('transactions', async () => {
-            const { data, error } = await supabase
-                .from('transactions')
-                .select()
-            if (error) return []
-            return data
-        })
-
-        return data.value
-    } finally {
-        isLoading.value = false
+const { pending, refresh, transactions: {
+    incomeCount,
+    expenseCount,
+    incomeTotal,
+    expenseTotal,
+    grouped: {
+        byDate
     }
-}
+} } = useFetchTransactions(current)
 
-const refreshTransactions = async () => transactions.value = await fetchTransactions()
-
-// Log fetched data to the console for debugging
-// console.log(transactions.value);
-
-await refreshTransactions();
-
-//  Group transactions by date for easier display
-
-const transactionsGroupedByDate = computed(() => {
-    let grouped = {}
-
-    for (const transaction of transactions.value) {
-        const date = new Date(transaction.created_at).toISOString().split('T')[0]
-
-        if (!grouped[date]) {
-            grouped[date] = []
-        }
-
-        grouped[date].push(transaction)
-    }
-
-    return grouped
-})
-
-console.log(transactionsGroupedByDate.value)
+const { transactions: {
+    incomeTotal: prevIncomeTotal,
+    expenseTotal: prevExpenseTotal,
+} } = useFetchTransactions(previous)
 
 </script>

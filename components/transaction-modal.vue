@@ -24,7 +24,7 @@
                         <USelect placeholder="Category" :items="categories" class="w-full" v-model="state.category" />
                     </UFormField>
 
-                    <UButton type="submit" color="primary" variant="solid" label="Save" />
+                    <UButton type="submit" color="primary" variant="solid" label="Save" :loading="isLoading" />
                 </UCard>
             </UForm>
         </template>
@@ -39,7 +39,7 @@ const props = defineProps({
     modelValue: Boolean
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'saved']) // Emit an event when the transaction is saved
 
 const defaultSchema = z.object({
     // type: z.enum(types),
@@ -77,6 +77,9 @@ const schema = z.intersection(
 )
 
 const form = ref()
+const isLoading = ref(false)
+const supabase = useSupabaseClient() // connect to Supabase backend for database operations
+const toast = useToast() // toast notification
 
 const initialState = {
     type: undefined,
@@ -88,6 +91,32 @@ const initialState = {
 
 const save = async () => {
     if (form.value.errors.length) return
+    isLoading.value = true
+    try {
+        const { error } = await supabase.from('transactions')
+            .upsert({ ...state.value })
+        if (!error) {
+            toast.add({
+                'title': 'Transaction saved',
+                'icon': 'i-heroicons-check-circle',
+                'color': 'success',
+            })
+            isOpen.value = false
+            emit('saved')
+            return
+        }
+        throw error
+    } catch (e) {
+        toast.add({
+            title: 'Transaction not saved',
+            description: e.message,
+            icon: 'i-heroicons-x-circle',
+            color: 'error',
+        })
+    } finally {
+        isLoading.value = false
+    }
+
 }
 
 const state = ref({
