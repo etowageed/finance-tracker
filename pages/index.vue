@@ -67,5 +67,4 @@ const { transactions: {
     incomeTotal: prevIncomeTotal,
     expenseTotal: prevExpenseTotal,
 } } = useFetchTransactions(previous)
-
 </script>

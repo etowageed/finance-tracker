@@ -50,25 +50,25 @@ const defaultSchema = z.object({
 })
 
 const incomeSchema = z.object({
-    type: z.literal('Income')
+    type: z.literal('income')
 })
 const expenseSchema = z.object({
-    type: z.literal('Expense'),
+    type: z.literal('expense'),
     category: z.enum(categories)
 
 })
 const investmentSchema = z.object({
-    type: z.literal('Investment')
+    type: z.literal('investment')
 })
 const savingSchema = z.object({
-    type: z.literal('Saving')
+    type: z.literal('saving')
 })
 // Add custom errorMap to the discriminatedUnion
 const schema = z.intersection(
     z.discriminatedUnion('type', [incomeSchema, expenseSchema, investmentSchema, savingSchema], {
         errorMap: (issue, ctx) => {
             if (issue.code === 'invalid_union_discriminator') {
-                return { message: "Please select a valid transaction type: Income, Expense, Investment, or Saving." }
+                return { message: "Please select a valid transaction type: income, expense, investment, or saving." }
             }
             return { message: ctx.defaultError }
         }
